@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>对极几何与对极约束 · 3D 交互演示</title>
+  <style>
+    :root {
+      --bg-canvas: #F6F6F7;
+      --bg-panel: #FFFFFF;
+      --bg-card: #F4F4F5;
+      --bg-dark: #111111;
+      --text-primary: #111111;
+      --text-secondary: #6E6E73;
+      --text-muted: #9A9AA0;
+      --border-light: #E8E8EC;
+      --accent-blue: #1D4ED8;
+      --accent-orange: #D97706;
+      --accent-red: #DC2626;
+      --accent-emerald: #059669;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-pill: 999px;
+      --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
+      --shadow-float: 0 12px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 主容器布局：桌面端左右分栏，移动端上下分栏 */
+    .app-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* 左侧信息与推导面板 */
+    .sidebar {
+      width: 400px;
+      min-width: 360px;
+      max-width: 440px;
+      height: 100%;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-light);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+    }
+
+    .sidebar-header {
+      padding: 20px 24px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .brand-tag {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--bg-dark);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .page-index {
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+      background: #DCDCE0;
+      border-radius: 4px;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .hero-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .hero-desc {
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+
+    .hero-desc strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* 推导步骤卡片 */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .step-card {
+      background: var(--bg-card);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .step-card:hover {
+      background: #EFEFF2;
+    }
+
+    .step-card.active {
+      background: #FFFFFF;
+      border-color: var(--bg-dark);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .step-num {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #E4E4E7;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+      transition: all 0.2s;
+    }
+
+    .step-card.active .step-num {
+      background: var(--bg-dark);
+      color: #FFFFFF;
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .step-body {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    /* 黑色高对比数学核心卡片 (参考图2黑白色系) */
+    .formula-card {
+      background: var(--bg-dark);
+      color: #FFFFFF;
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 14px 30px rgba(17, 17, 17, 0.16);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .formula-card::after {
+      content: "";
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(255,255,255,0.09) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .formula-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .formula-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+      background: rgba(255, 255, 255, 0.12);
+      color: #E4E4E7;
+    }
+
+    .formula-status {
+      font-size: 11px;
+      color: #34D399;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34D399;
+      box-shadow: 0 0 8px #34D399;
+    }
+
+    .formula-main {
+      font-family: "Times New Roman", Georgia, serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin: 6px 0 10px;
+      color: #FFFFFF;
+    }
+
+    .formula-main span.vec {
+      font-style: italic;
+    }
+
+    .formula-sub {
+      font-size: 12px;
+      color: #A1A1AA;
+      line-height: 1.5;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding-top: 10px;
+    }
+
+    /* 实时参数控制区 (参考图2圆角控件) */
+    .control-group {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .toggle-btn {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid #D4D4D8;
+      background: #FFFFFF;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: var(--bg-dark);
+      color: #FFFFFF;
+      border-color: var(--bg-dark);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-label {
+      width: 24px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 6px;
+      background: #E4E4E7;
+      border-radius: 999px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--bg-dark);
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.18);
+    }
+
+    .slider-val {
+      width: 38px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+
+    /* 右侧 3D 视口区域 */
+    .viewport-wrapper {
+      flex: 1;
+      position: relative;
+      height: 100%;
+      background: radial-gradient(circle at 50% 45%, #FFFFFF 0%, #F2F2F5 100%);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 顶部悬浮状态栏 */
+    .top-bar {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .scene-pill {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .scene-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--bg-dark);
+    }
+
+    .reset-btn {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-soft);
+      transition: transform 0.15s, background 0.2s;
+    }
+
+    .reset-btn:hover {
+      background: #FFFFFF;
+      transform: translateY(-1px);
+    }
+
+    .reset-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* 3D 空间浮动标签 */
+    #labels-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 3;
+    }
+
+    .spatial-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      letter-spacing: 0.2px;
+    }
+
+    .label-dark {
+      background: #111111;
+      color: #FFFFFF;
+    }
+
+    .label-red {
+      background: #DC2626;
+      color: #FFFFFF;
+    }
+
+    .label-light {
+      background: rgba(255, 255, 255, 0.92);
+      color: #111111;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .label-blue {
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+    }
+
+    .label-orange {
+      background: #FFFBEB;
+      color: #B45309;
+      border: 1px solid #FDE68A;
+    }
+
+    .label-emerald {
+      background: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+    }
+
+    /* 底部悬浮控制条与实时数据读数 */
+    .bottom-dock {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hint-pill {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      color: var(--text-secondary);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .dock-row {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .telemetry-pill {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-soft);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-pill strong {
+      color: var(--text-primary);
+    }
+
+    .telemetry-zero {
+      color: var(--accent-emerald);
+      font-weight: 700;
+    }
+
+    .view-switcher {
+      pointer-events: auto;
+      background: #111111;
+      padding: 4px;
+      border-radius: var(--radius-pill);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      box-shadow: var(--shadow-float);
+    }
+
+    .view-btn {
+      border: none;
+      background: transparent;
+      color: #A1A1AA;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .view-btn:hover {
+      color: #FFFFFF;
+    }
+
+    .view-btn.active {
+      background: #FFFFFF;
+      color: #111111;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 响应式适配：安卓手机竖屏模式 */
+    @media (max-width: 860px) {
+      .app-container {
+        flex-direction: column-reverse;
+      }
+
+      .viewport-wrapper {
+        height: 54%;
+        min-height: 300px;
+      }
+
+      .sidebar {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        height: 46%;
+        border-right: none;
+        border-top: 1px solid var(--border-light);
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.05);
+      }
+
+      .sidebar-header {
+        padding: 12px 18px 10px;
+      }
+
+      .sidebar-scroll {
+        padding: 14px 18px 24px;
+        gap: 14px;
+      }
+
+      .hero-title {
+        font-size: 20px;
+      }
+
+      .top-bar {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+      }
+
+      .bottom-dock {
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        gap: 6px;
+      }
+
+      .hint-pill {
+        display: none;
+      }
+
+      .dock-row {
+        justify-content: center;
+      }
+
+      .telemetry-pill {
+        font-size: 10.5px;
+        padding: 6px 10px;
+        gap: 8px;
+      }
+
+      .view-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+      }
+    }
+  </style>
+  <!-- 引入 Three.js 及 OrbitControls -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- 左侧交互式推导与参数面板 -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-tag">
+        <div class="brand-icon">3D</div>
+        <div>
+          <div class="brand-title">对极几何 Epipolar Geometry</div>
+          <div class="brand-sub">Visual SLAM · Interactive Lab</div>
+        </div>
+      </div>
+      <div class="page-index">03</div>
+    </div>
+
+    <div class="sidebar-scroll">
+      <div>
+        <div class="eyebrow">Essential Matrix · 核心几何直觉</div>
+        <h1 class="hero-title">三条向量，<br>为什么一定共面？</h1>
+        <p class="hero-desc">
+          空间点 <strong>P</strong> 与两个相机光心 <strong>O₁、O₂</strong> 共同锁定了一张唯一的<strong>极平面 π</strong>。无论坐标系如何旋转平移，三条射线始终躺在这张平面内。
+        </p>
+      </div>
+
+      <!-- 交互步骤卡片 -->
+      <div class="step-list">
+        <div class="step-card active" data-preset="overview">
+          <div class="step-header">
+            <span class="step-num">01</span>
+            <span class="step-title">三点锁定一张极平面 π</span>
+          </div>
+          <div class="step-body">
+            光心 <strong>O₁、O₂</strong> 与空间点 <strong>P</strong> 不共线，三点在三维空间中唯一确定极平面 π（半透明暖色三角面）。
+          </div>
+        </div>
+
+        <div class="step-card" data-preset="vectors">
+          <div class="step-header">
+            <span class="step-num">02</span>
+            <span class="step-title">三条向量天然共面</span>
+          </div>
+          <div class="step-body">
+            基线向量 <strong>t</strong>、射线 <strong>O₁P (x₁)</strong> 与 <strong>O₂P (x₂)</strong> 是极平面三角形的三条边，混合积恒等于零。
+          </div>
+        </div>
+
+        <div class="step-card" data-preset="epipolar">
+          <div class="step-header">
+            <span class="step-num">03</span>
+            <span class="step-title">变换到第 2 帧，共面依然成立</span>
+          </div>
+          <div class="step-body">
+            用旋转矩阵 <strong>R</strong> 将 <strong>x₁</strong> 旋转至第 2 帧坐标系得到 <strong>Rx₁</strong>（绿色虚线），它与 <strong>O₁P</strong> 平行，仍与 <strong>t、x₂</strong> 共面，且极平面与像平面相交形成<strong>极线 l₁、l₂</strong>。
+          </div>
+        </div>
+      </div>
+
+      <!-- 黑白高对比核心公式卡片 -->
+      <div class="formula-card">
+        <div class="formula-top">
+          <span class="formula-badge">对极约束 EPIPOLAR CONSTRAINT</span>
+          <span class="formula-status"><span class="status-dot"></span>共面锁定</span>
+        </div>
+        <div class="formula-main">
+          <span class="vec">x</span><sub>2</sub><sup>T</sup> ( <span class="vec">t</span> × <span class="vec">R x</span><sub>1</sub> ) = 0
+        </div>
+        <div class="formula-sub">
+          等价形式：<strong style="color:#fff;">x₂ᵀ [t]× R x₁ = 0</strong> &nbsp;→&nbsp; <strong style="color:#fff;">x₂ᵀ E x₁ = 0</strong><br>
+          几何意义：已知左图像素 <em>p₁</em>，右图对应点 <em>p₂</em> 必落在极线 <em>l₂</em> 上。
+        </div>
+      </div>
+
+      <!-- 空间点 P 动态控制 -->
+      <div class="control-group">
+        <div class="control-header">
+          <span class="control-title">空间点 P 实时坐标调节</span>
+          <button id="auto-float-btn" class="toggle-btn active">动态悬浮演示</button>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">X</span>
+          <input type="range" id="slider-x" min="-1.5" max="3.8" step="0.05" value="1.6" />
+          <span class="slider-val" id="val-x">1.60</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Y</span>
+          <input type="range" id="slider-y" min="0.4" max="3.4" step="0.05" value="2.1" />
+          <span class="slider-val" id="val-y">2.10</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Z</span>
+          <input type="range" id="slider-z" min="1.2" max="4.5" step="0.05" value="2.8" />
+          <span class="slider-val" id="val-z">2.80</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右侧 3D 渲染舞台 -->
+  <main class="viewport-wrapper" id="viewport">
+    <div id="canvas-container"></div>
+
+    <!-- 顶部状态条 -->
+    <div class="top-bar">
+      <div class="scene-pill">
+        <span class="dot"></span>
+        <span>双目对极几何 · 实时三维验证</span>
+      </div>
+      <button class="reset-btn" id="reset-cam-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        重置视角
+      </button>
+    </div>
+
+    <!-- 3D 空间动态投影标签 -->
+    <div id="labels-layer">
+      <div class="spatial-label label-dark" id="lbl-o1">O₁ 相机 1</div>
+      <div class="spatial-label label-dark" id="lbl-o2">O₂ 相机 2</div>
+      <div class="spatial-label label-red" id="lbl-p">P 空间点 (可拖拽)</div>
+      <div class="spatial-label label-orange" id="lbl-t">t 基线向量</div>
+      <div class="spatial-label label-blue" id="lbl-x1">x₁ 第 1 帧射线</div>
+      <div class="spatial-label label-blue" id="lbl-x2">x₂ 第 2 帧射线</div>
+      <div class="spatial-label label-emerald" id="lbl-rx1">R x₁ 旋转后平行向量</div>
+      <div class="spatial-label label-light" id="lbl-p1">p₁ 投影点</div>
+      <div class="spatial-label label-light" id="lbl-p2">p₂ 投影点</div>
+      <div class="spatial-label label-orange" id="lbl-l1">极线 l₁</div>
+      <div class="spatial-label label-orange" id="lbl-l2">极线 l₂</div>
+      <div class="spatial-label label-light" id="lbl-pi">极平面 π</div>
+    </div>
+
+    <!-- 底部悬浮控制条 -->
+    <div class="bottom-dock">
+      <div class="hint-pill">单指/左键旋转视角 · 双指/滚轮缩放 · 直接拖动红点 P 实时验证共面</div>
+      <div class="dock-row">
+        <div class="telemetry-pill">
+          <span>P: <strong id="tel-p">(1.60, 2.10, 2.80)</strong></span>
+          <span>三重积 x₂ᵀ(t × Rx₁) = <span class="telemetry-zero" id="tel-triple">0.000</span></span>
+        </div>
+
+        <div class="view-switcher">
+          <button class="view-btn active" data-preset="overview">全景视角</button>
+          <button class="view-btn" data-preset="vectors">三向量共面</button>
+          <button class="view-btn" data-preset="epipolar">极线特写</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  // ==========================================
+  // 1. 初始化场景、相机与渲染器
+  // ==========================================
+  const container = document.getElementById('canvas-container');
+  const viewport = document.getElementById('viewport');
+
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(42, viewport.clientWidth / viewport.clientHeight, 0.1, 100);
+  camera.position.set(0.8, 3.6, 8.8);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 兼顾高分屏清晰度与安卓端流畅帧率
+  container.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.minDistance = 2.8;
+  controls.maxDistance = 18;
+  controls.target.set(1.1, 1.1, 1.4);
+
+  // 环境光与柔和方向光
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  dirLight.position.set(5, 10, 7);
+  scene.add(dirLight);
+
+  // 极简浅灰建筑网格地面
+  const gridHelper = new THREE.GridHelper(14, 28, 0xd4d4d8, 0xeaecef);
+  gridHelper.position.y = -1.2;
+  scene.add(gridHelper);
+
+  // ==========================================
+  // 2. 定义双相机位姿与几何常量
+  // ==========================================
+  // 相机 1 位于原点 O1，朝向 +Z
+  const O1 = new THREE.Vector3(-1.5, 0.3, -0.4);
+  const q1 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.08, 0.22, 0.02, 'YXZ'));
+
+  // 相机 2 位于右侧前方 O2，朝向内侧观察同一空间点
+  const O2 = new THREE.Vector3(2.5, -0.2, 0.3);
+  const q2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.12, -0.38, -0.05, 'YXZ'));
+
+  // 空间点 P 初始坐标
+  const P = new THREE.Vector3(1.6, 2.1, 2.8);
+
+  // 相机视锥体与归一化像平面辅助构建器 (z_cam = 1.15)
+  const FOCAL_Z = 1.15;
+  const PLANE_W = 1.45;
+  const PLANE_H = 1.05;
+
+  function createCameraRig(origin, quat, colorHex) {
+    const group = new THREE.Group();
+    group.position.copy(origin);
+    group.quaternion.copy(quat);
+
+    // 光心球体
+    const centerGeo = new THREE.SphereGeometry(0.11, 24, 24);
+    const centerMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
+    const centerMesh = new THREE.Mesh(centerGeo, centerMat);
+    group.add(centerMesh);
+
+    // 局部坐标轴 (X红, Y绿, Z蓝)
+    const axisLen = 0.65;
+    const xAxis = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), axisLen, 0xef4444, 0.12, 0.07);
+    const yAxis = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), axisLen, 0x10b981, 0.12, 0.07);
+    const zAxis = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), axisLen * 1.15, 0x3b82f6, 0.12, 0.07);
+    group.add(xAxis, yAxis, zAxis);
+
+    // 归一化像平面 z = FOCAL_Z
+    const planeGeo = new THREE.PlaneGeometry(PLANE_W, PLANE_H);
+    const planeMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.68,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+    planeMesh.position.set(0, 0, FOCAL_Z);
+    group.add(planeMesh);
+
+    // 像平面边框与十字准星网格
+    const edges = new THREE.EdgesGeometry(planeGeo);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x52525b, transparent: true, opacity: 0.75 });
+    const border = new THREE.LineSegments(edges, lineMat);
+    border.position.set(0, 0, FOCAL_Z);
+    group.add(border);
+
+    // 视锥四条棱边
+    const hw = PLANE_W / 2;
+    const hh = PLANE_H / 2;
+    const corners = [
+      new THREE.Vector3(-hw, -hh, FOCAL_Z),
+      new THREE.Vector3(hw, -hh, FOCAL_Z),
+      new THREE.Vector3(hw, hh, FOCAL_Z),
+      new THREE.Vector3(-hw, hh, FOCAL_Z)
+    ];
+    const frustumPts = [];
+    corners.forEach(c => {
+      frustumPts.push(new THREE.Vector3(0, 0, 0), c);
+    });
+    const frustumGeo = new THREE.BufferGeometry().setFromPoints(frustumPts);
+    const frustumMat = new THREE.LineBasicMaterial({ color: 0xa1a1aa, transparent: true, opacity: 0.55 });
+    const frustumLines = new THREE.LineSegments(frustumGeo, frustumMat);
+    group.add(frustumLines);
+
+    scene.add(group);
+    return group;
+  }
+
+  const camRig1 = createCameraRig(O1, q1, 0x1d4ed8);
+  const camRig2 = createCameraRig(O2, q2, 0x1d4ed8);
+
+  // ==========================================
+  // 3. 动态几何元素：极平面、射线、极线、投影点
+  // ==========================================
+  // 空间点 P 球体（带外圈光晕，提示可拖拽）
+  const pGroup = new THREE.Group();
+  const pCore = new THREE.Mesh(
+    new THREE.SphereGeometry(0.13, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.25 })
+  );
+  const pHalo = new THREE.Mesh(
+    new THREE.SphereGeometry(0.24, 24, 24),
+    new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.18 })
+  );
+  pGroup.add(pCore, pHalo);
+  scene.add(pGroup);
+
+  // 像平面投影点 p1, p2
+  const projMat = new THREE.MeshBasicMaterial({ color: 0x1d4ed8 });
+  const p1Mesh = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), projMat);
+  const p2Mesh = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), projMat);
+  scene.add(p1Mesh, p2Mesh);
+
+  // 极平面 π 三角面片 (O1 - O2 - P)
+  const epiPlaneGeo = new THREE.BufferGeometry();
+  const epiVertices = new Float32Array(9);
+  epiPlaneGeo.setAttribute('position', new THREE.BufferAttribute(epiVertices, 3));
+  const epiPlaneMat = new THREE.MeshBasicMaterial({
+    color: 0xf59e0b,
+    transparent: true,
+    opacity: 0.16,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  const epiPlaneMesh = new THREE.Mesh(epiPlaneGeo, epiPlaneMat);
+  scene.add(epiPlaneMesh);
+
+  // 粗线条/圆柱箭头辅助工具
+  function createCylinderRod(colorHex, radius = 0.024) {
+    const geo = new THREE.CylinderGeometry(radius, radius, 1, 12);
+    geo.translate(0, 0.5, 0);
+    geo.rotateX(Math.PI / 2);
+    const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+    const mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    return mesh;
+  }
+
+  function updateRod(mesh, start, end) {
+    mesh.position.copy(start);
+    mesh.lookAt(end);
+    mesh.scale.set(1, 1, start.distanceTo(end));
+  }
+
+  // 基线 t (O1 -> O2)
+  const baselineRod = createCylinderRod(0xd97706, 0.028);
+  const baselineCone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.075, 0.22, 16),
+    new THREE.MeshStandardMaterial({ color: 0xd97706 })
+  );
+  baselineCone.geometry.rotateX(Math.PI / 2);
+  scene.add(baselineCone);
+
+  // 两条观察射线 O1->P 和 O2->P
+  const ray1Rod = createCylinderRod(0x2563eb, 0.022);
+  const ray2Rod = createCylinderRod(0x2563eb, 0.022);
+
+  // 极线 l1 和 l2 (极平面与像平面的交线)
+  const epiLine1Rod = createCylinderRod(0xea580c, 0.024);
+  const epiLine2Rod = createCylinderRod(0xea580c, 0.024);
+
+  // 旋转后的平行参考向量 R x1 (从 O2 出发，方向平行于 O1->P)
+  const rx1LineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, 1)]);
+  const rx1LineMat = new THREE.LineDashedMaterial({
+    color: 0x059669,
+    dashSize: 0.14,
+    gapSize: 0.09,
+    linewidth: 2
+  });
+  const rx1Line = new THREE.Line(rx1LineGeo, rx1LineMat);
+  const rx1Cone = new THREE.Mesh(
+    new THREE.ConeGeometry(0.065, 0.18, 16),
+    new THREE.MeshBasicMaterial({ color: 0x059669 })
+  );
+  rx1Cone.geometry.rotateX(Math.PI / 2);
+  scene.add(rx1Line, rx1Cone);
+
+  // ==========================================
+  // 4. 计算像平面交点与极线几何交集
+  // ==========================================
+  function intersectRayWithImagePlane(origin, quat, targetWorld) {
+    // 转换到相机局部坐标系
+    const invQuat = quat.clone().invert();
+    const localTarget = targetWorld.clone().sub(origin).applyQuaternion(invQuat);
+    if (localTarget.z <= 0.05) return null;
+    const scale = FOCAL_Z / localTarget.z;
+    const localHit = new THREE.Vector3(localTarget.x * scale, localTarget.y * scale, FOCAL_Z);
+    return localHit.applyQuaternion(quat).add(origin);
+  }
+
+  // 计算极平面 (O1, O2, P) 与相机像平面矩形边框的交线段 (极线)
+  function computeEpipolarLineSegment(camOrigin, camQuat, pA, pB, pC) {
+    const invQuat = camQuat.clone().invert();
+    const a = pA.clone().sub(camOrigin).applyQuaternion(invQuat);
+    const b = pB.clone().sub(camOrigin).applyQuaternion(invQuat);
+    const c = pC.clone().sub(camOrigin).applyQuaternion(invQuat);
+
+    // 极平面局部法向量 n = (b - a) x (c - a)
+    const n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+    // 平面方程: n.x * x + n.y * y + n.z * FOCAL_Z = n.dot(a)
+    const rhs = n.dot(a) - n.z * FOCAL_Z;
+
+    const hw = PLANE_W / 2;
+    const hh = PLANE_H / 2;
+    const hits = [];
+
+    // 与四条边求交: x = ±hw, y = ±hh
+    if (Math.abs(n.y) > 1e-5) {
+      [-hw, hw].forEach(xVal => {
+        const yVal = (rhs - n.x * xVal) / n.y;
+        if (yVal >= -hh - 1e-4 && yVal <= hh + 1e-4) {
+          hits.push(new THREE.Vector3(xVal, yVal, FOCAL_Z));
+        }
+      });
+    }
+    if (Math.abs(n.x) > 1e-5) {
+      [-hh, hh].forEach(yVal => {
+        const xVal = (rhs - n.y * yVal) / n.x;
+        if (xVal >= -hw - 1e-4 && xVal <= hw + 1e-4) {
+          // 去重
+          if (!hits.some(h => Math.hypot(h.x - xVal, h.y - yVal) < 1e-3)) {
+            hits.push(new THREE.Vector3(xVal, yVal, FOCAL_Z));
+          }
+        }
+      });
+    }
+
+    if (hits.length >= 2) {
+      return [
+        hits[0].applyQuaternion(camQuat).add(camOrigin),
+        hits[1].applyQuaternion(camQuat).add(camOrigin)
+      ];
+    }
+    return null;
+  }
+
+  // ==========================================
+  // 5. 更新整体 3D 几何状态与 UI 读数
+  // ==========================================
+  const labelElements = {
+    o1: document.getElementById('lbl-o1'),
+    o2: document.getElementById('lbl-o2'),
+    p: document.getElementById('lbl-p'),
+    t: document.getElementById('lbl-t'),
+    x1: document.getElementById('lbl-x1'),
+    x2: document.getElementById('lbl-x2'),
+    rx1: document.getElementById('lbl-rx1'),
+    p1: document.getElementById('lbl-p1'),
+    p2: document.getElementById('lbl-p2'),
+    l1: document.getElementById('lbl-l1'),
+    l2: document.getElementById('lbl-l2'),
+    pi: document.getElementById('lbl-pi')
+  };
+
+  const sliderX = document.getElementById('slider-x');
+  const sliderY = document.getElementById('slider-y');
+  const sliderZ = document.getElementById('slider-z');
+  const valX = document.getElementById('val-x');
+  const valY = document.getElementById('val-y');
+  const valZ = document.getElementById('val-z');
+  const telP = document.getElementById('tel-p');
+  const telTriple = document.getElementById('tel-triple');
+
+  function updateGeometry() {
+    pGroup.position.copy(P);
+
+    // 更新极平面三角形顶点 (O1, O2, P)
+    const posAttr = epiPlaneGeo.attributes.position;
+    posAttr.setXYZ(0, O1.x, O1.y, O1.z);
+    posAttr.setXYZ(1, O2.x, O2.y, O2.z);
+    posAttr.setXYZ(2, P.x, P.y, P.z);
+    posAttr.needsUpdate = true;
+
+    // 更新基线向量 t (O1 -> O2)
+    const dirT = new THREE.Vector3().subVectors(O2, O1).normalize();
+    const tEnd = O2.clone().sub(dirT.clone().multiplyScalar(0.16));
+    updateRod(baselineRod, O1, tEnd);
+    baselineCone.position.copy(tEnd);
+    baselineCone.lookAt(O2);
+
+    // 更新射线 O1->P 与 O2->P
+    updateRod(ray1Rod, O1, P);
+    updateRod(ray2Rod, O2, P);
+
+    // 更新平行参考向量 R x1 (起点 O2，方向与 O1->P 严格平行)
+    const dirO1P = new THREE.Vector3().subVectors(P, O1).normalize();
+    const rx1Len = 2.4;
+    const rx1End = O2.clone().addScaledVector(dirO1P, rx1Len);
+    rx1Line.geometry.setFromPoints([O2, rx1End]);
+    rx1Line.computeLineDistances();
+    rx1Cone.position.copy(rx1End);
+    rx1Cone.lookAt(rx1End.clone().add(dirO1P));
+
+    // 计算像平面投影点 p1, p2
+    const hit1 = intersectRayWithImagePlane(O1, q1, P);
+    const hit2 = intersectRayWithImagePlane(O2, q2, P);
+    if (hit1) {
+      p1Mesh.visible = true;
+      p1Mesh.position.copy(hit1);
+    } else {
+      p1Mesh.visible = false;
+    }
+    if (hit2) {
+      p2Mesh.visible = true;
+      p2Mesh.position.copy(hit2);
+    } else {
+      p2Mesh.visible = false;
+    }
+
+    // 计算并绘制两条极线 l1, l2
+    const seg1 = computeEpipolarLineSegment(O1, q1, O1, O2, P);
+    if (seg1) {
+      epiLine1Rod.visible = true;
+      updateRod(epiLine1Rod, seg1[0], seg1[1]);
+    } else {
+      epiLine1Rod.visible = false;
+    }
+
+    const seg2 = computeEpipolarLineSegment(O2, q2, O1, O2, P);
+    if (seg2) {
+      epiLine2Rod.visible = true;
+      updateRod(epiLine2Rod, seg2[0], seg2[1]);
+    } else {
+      epiLine2Rod.visible = false;
+    }
+
+    // 同步数值面板与三重积验证
+    sliderX.value = P.x.toFixed(2);
+    sliderY.value = P.y.toFixed(2);
+    sliderZ.value = P.z.toFixed(2);
+    valX.textContent = P.x.toFixed(2);
+    valY.textContent = P.y.toFixed(2);
+    valZ.textContent = P.z.toFixed(2);
+    telP.textContent = `(${P.x.toFixed(2)}, ${P.y.toFixed(2)}, ${P.z.toFixed(2)})`;
+
+    // 数值计算标量三重积 x2 · (t × Rx1)
+    const v_t = new THREE.Vector3().subVectors(O2, O1);
+    const v_rx1 = new THREE.Vector3().subVectors(P, O1);
+    const v_x2 = new THREE.Vector3().subVectors(P, O2);
+    const triple = v_x2.dot(new THREE.Vector3().crossVectors(v_t, v_rx1));
+    telTriple.textContent = Math.abs(triple).toFixed(3);
+  }
+
+  // ==========================================
+  // 6. 3D 坐标到屏幕 2D 标签投影
+  // ==========================================
+  function projectLabel(el, worldPos, offsetX = 0, offsetY = 0, visible = true) {
+    if (!visible) {
+      el.style.opacity = '0';
+      return;
+    }
+    const v = worldPos.clone().project(camera);
+    if (v.z > 1) {
+      el.style.opacity = '0';
+      return;
+    }
+    const x = (v.x * 0.5 + 0.5) * viewport.clientWidth + offsetX;
+    const y = (-v.y * 0.5 + 0.5) * viewport.clientHeight + offsetY;
+    el.style.opacity = '1';
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+  }
+
+  function updateLabels() {
+    projectLabel(labelElements.o1, O1, -46, 12);
+    projectLabel(labelElements.o2, O2, 46, 16);
+    projectLabel(labelElements.p, P, 0, -24);
+
+    const midT = new THREE.Vector3().addVectors(O1, O2).multiplyScalar(0.5);
+    projectLabel(labelElements.t, midT, 0, 18);
+
+    const midX1 = new THREE.Vector3().lerpVectors(O1, P, 0.56);
+    projectLabel(labelElements.x1, midX1, -28, -14);
+
+    const midX2 = new THREE.Vector3().lerpVectors(O2, P, 0.52);
+    projectLabel(labelElements.x2, midX2, 34, -6);
+
+    const dirO1P = new THREE.Vector3().subVectors(P, O1).normalize();
+    const rx1Tip = O2.clone().addScaledVector(dirO1P, 2.4);
+    projectLabel(labelElements.rx1, rx1Tip, 55, 0);
+
+    const centroid = new THREE.Vector3().add(O1).add(O2).add(P).divideScalar(3);
+    projectLabel(labelElements.pi, centroid, 0, 0);
+
+    if (p1Mesh.visible) projectLabel(labelElements.p1, p1Mesh.position, -32, -8, true);
+    else projectLabel(labelElements.p1, O1, 0, 0, false);
+
+    if (p2Mesh.visible) projectLabel(labelElements.p2, p2Mesh.position, 32, -8, true);
+    else projectLabel(labelElements.p2, O2, 0, 0, false);
+
+    // 极线标签
+    const localTop1 = new THREE.Vector3(-0.35, PLANE_H / 2 + 0.14, FOCAL_Z).applyQuaternion(q1).add(O1);
+    projectLabel(labelElements.l1, localTop1, 0, 0);
+
+    const localTop2 = new THREE.Vector3(0.45, -0.1, FOCAL_Z).applyQuaternion(q2).add(O2);
+    projectLabel(labelElements.l2, localTop2, 38, 0);
+  }
+
+  // ==========================================
+  // 7. 丝滑视角预设过渡动画 (三次贝塞尔缓动)
+  // ==========================================
+  const PRESETS = {
+    overview: {
+      pos: new THREE.Vector3(0.8, 3.6, 8.8),
+      target: new THREE.Vector3(1.1, 1.1, 1.4)
+    },
+    vectors: {
+      // 垂直于极平面方向俯瞰，凸显三向量共面
+      pos: new THREE.Vector3(-0.4, 5.8, 5.2),
+      target: new THREE.Vector3(0.9, 0.9, 1.2)
+    },
+    epipolar: {
+      // 聚焦相机2像平面与极线 l2 特写
+      pos: new THREE.Vector3(4.6, 1.2, 3.5),
+      target: new THREE.Vector3(2.1, 0.3, 1.2)
+    }
+  };
+
+  let camAnim = null;
+
+  function flyToPreset(presetKey) {
+    const preset = PRESETS[presetKey];
+    if (!preset) return;
+
+    // 同步按钮与卡片高亮状态
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.preset === presetKey);
+    });
+    document.querySelectorAll('.step-card').forEach(card => {
+      card.classList.toggle('active', card.dataset.preset === presetKey);
+    });
+
+    camAnim = {
+      startPos: camera.position.clone(),
+      endPos: preset.pos.clone(),
+      startTarget: controls.target.clone(),
+      endTarget: preset.target.clone(),
+      progress: 0,
+      duration: 0.85 // 秒
+    };
+  }
+
+  document.querySelectorAll('.view-btn, .step-card').forEach(el => {
+    el.addEventListener('click', () => {
+      flyToPreset(el.dataset.preset);
+    });
+  });
+
+  document.getElementById('reset-cam-btn').addEventListener('click', () => {
+    flyToPreset('overview');
+  });
+
+  // ==========================================
+  // 8. 空间点 P 交互：直接拖拽 (兼容鼠标与安卓触屏) + 滑块 + 自动悬浮
+  // ==========================================
+  let autoFloat = true;
+  const autoFloatBtn = document.getElementById('auto-float-btn');
+
+  autoFloatBtn.addEventListener('click', () => {
+    autoFloat = !autoFloat;
+    autoFloatBtn.classList.toggle('active', autoFloat);
+  });
+
+  function stopAutoFloat() {
+    if (autoFloat) {
+      autoFloat = false;
+      autoFloatBtn.classList.remove('active');
+    }
+  }
+
+  [sliderX, sliderY, sliderZ].forEach(slider => {
+    slider.addEventListener('input', () => {
+      stopAutoFloat();
+      P.set(parseFloat(sliderX.value), parseFloat(sliderY.value), parseFloat(sliderZ.value));
+      updateGeometry();
+    });
+  });
+
+  // Raycaster 空间拖拽红点 P
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const dragPlane = new THREE.Plane();
+  const dragOffset = new THREE.Vector3();
+  let isDraggingP = false;
+
+  function updatePointer(clientX, clientY) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    updatePointer(e.clientX, e.clientY);
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects([pCore, pHalo], false);
+    if (hits.length > 0) {
+      isDraggingP = true;
+      controls.enabled = false;
+      stopAutoFloat();
+
+      // 构建垂直于当前相机视线的拖拽平面
+      const camDir = new THREE.Vector3();
+      camera.getWorldDirection(camDir);
+      dragPlane.setFromNormalAndCoplanarPoint(camDir, P);
+
+      const intersectPt = new THREE.Vector3();
+      raycaster.ray.intersectPlane(dragPlane, intersectPt);
+      dragOffset.copy(P).sub(intersectPt);
+      renderer.domElement.style.cursor = 'grabbing';
+    }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDraggingP) {
+      // 桌面端悬停提示
+      if (e.pointerType === 'mouse') {
+        updatePointer(e.clientX, e.clientY);
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects([pCore, pHalo], false);
+        renderer.domElement.style.cursor = hits.length > 0 ? 'grab' : 'default';
+      }
+      return;
+    }
+    updatePointer(e.clientX, e.clientY);
+    raycaster.setFromCamera(pointer, camera);
+    const intersectPt = new THREE.Vector3();
+    if (raycaster.ray.intersectPlane(dragPlane, intersectPt)) {
+      const nextP = intersectPt.add(dragOffset);
+      // 限制在合理演示范围内
+      P.x = THREE.MathUtils.clamp(nextP.x, -1.5, 3.8);
+      P.y = THREE.MathUtils.clamp(nextP.y, 0.4, 3.4);
+      P.z = THREE.MathUtils.clamp(nextP.z, 1.2, 4.5);
+      updateGeometry();
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (isDraggingP) {
+      isDraggingP = false;
+      controls.enabled = true;
+      renderer.domElement.style.cursor = 'default';
+    }
+  });
+
+  // ==========================================
+  // 9. 窗口自适应与主渲染循环
+  // ==========================================
+  window.addEventListener('resize', () => {
+    camera.aspect = viewport.clientWidth / viewport.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  });
+
+  const clock = new THREE.Clock();
+  const baseP = P.clone();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    const elapsed = clock.getElapsedTime();
+
+    // 柔和动态悬浮演示：展示 P 移动时极平面与极线实时联动
+    if (autoFloat && !isDraggingP) {
+      P.x = baseP.x + Math.sin(elapsed * 0.9) * 0.55;
+      P.y = baseP.y + Math.cos(elapsed * 1.2) * 0.35;
+      P.z = baseP.z + Math.sin(elapsed * 0.7) * 0.45;
+      updateGeometry();
+    }
+
+    // 呼吸光晕脉冲
+    const haloScale = 1 + Math.sin(elapsed * 3.5) * 0.14;
+    pHalo.scale.set(haloScale, haloScale, haloScale);
+
+    // 相机视角平滑过渡
+    if (camAnim) {
+      camAnim.progress += dt / camAnim.duration;
+      const t = Math.min(camAnim.progress, 1);
+      // easeOutCubic
+      const ease = 1 - Math.pow(1 - t, 3);
+      camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, ease);
+      controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, ease);
+      if (t >= 1) camAnim = null;
+    }
+
+    controls.update();
+    updateLabels();
+    renderer.render(scene, camera);
+  }
+
+  // 初始化首帧
+  updateGeometry();
+  animate();
+</script>
+</body>
+</html>
